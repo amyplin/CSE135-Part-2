@@ -26,37 +26,9 @@
 	
 	if ("POST".equalsIgnoreCase(request.getMethod())) {
 		String action = request.getParameter("rows");
-		if (action.equals("Customers")) {
-			Statement stmt = conn.createStatement();
-			String sql = "SELECT users.name FROM users INNER JOIN orders ON user.id = orders.user_id";
-			try {
-				ResultSet rs = stmt.executeQuery(sql);
-			}
-			catch(Exception e) {out.println("<script>alert('error!');</script>");} 
-		} else {
-			System.out.println("GOOOOODBYE");
+		if (action.equals("States")) {
+			response.sendRedirect("StateOrders.jsp");
 		}
-/* 		else if (action.equals("update")) {
-			int id = Integer.parseInt(request.getParameter("id"));
-			String name = request.getParameter("name");
-			String description = request.getParameter("description");
-			Statement stmt = conn.createStatement();
-			String sql = "UPDATE categories SET name = '" + name +
-					"', description = '" + description + "' where id = " + id;
-			int result = stmt.executeUpdate(sql);
-			if (result == 1) out.println("<script>alert('update category sucess!');</script>");
-		    else out.println("<script>alert('update category fail!');</script>");
-		}
-		else if (action.equals("insert")) {
-			String name = request.getParameter("name");
-			String description = request.getParameter("description");
-			Statement stmt = conn.createStatement();
-			String sql = "INSERT into categories(name, description) values('" + name +
-					"', '" + description + "')";
-			int result = stmt.executeUpdate(sql);
-			if (result == 1) out.println("<script>alert('insert into category sucess!');</script>");
-		    else out.println("<script>alert('insert into category fail!');</script>");
-		} */
 	
 	} 
 	Statement stmt = conn.createStatement();

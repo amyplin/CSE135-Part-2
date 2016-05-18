@@ -27,42 +27,18 @@
 	if ("POST".equalsIgnoreCase(request.getMethod())) {
 		String action = request.getParameter("rows");
 		if (action.equals("Customers")) {
-			Statement stmt = conn.createStatement();
-			String sql = "SELECT users.name FROM users INNER JOIN orders ON user.id = orders.user_id";
-			try {
-				ResultSet rs = stmt.executeQuery(sql);
-			}
-			catch(Exception e) {out.println("<script>alert('error!');</script>");} 
-		} else {
-			System.out.println("GOOOOODBYE");
+			response.sendRedirect("orders.jsp");
 		}
-/* 		else if (action.equals("update")) {
-			int id = Integer.parseInt(request.getParameter("id"));
-			String name = request.getParameter("name");
-			String description = request.getParameter("description");
-			Statement stmt = conn.createStatement();
-			String sql = "UPDATE categories SET name = '" + name +
-					"', description = '" + description + "' where id = " + id;
-			int result = stmt.executeUpdate(sql);
-			if (result == 1) out.println("<script>alert('update category sucess!');</script>");
-		    else out.println("<script>alert('update category fail!');</script>");
-		}
-		else if (action.equals("insert")) {
-			String name = request.getParameter("name");
-			String description = request.getParameter("description");
-			Statement stmt = conn.createStatement();
-			String sql = "INSERT into categories(name, description) values('" + name +
-					"', '" + description + "')";
-			int result = stmt.executeUpdate(sql);
-			if (result == 1) out.println("<script>alert('insert into category sucess!');</script>");
-		    else out.println("<script>alert('insert into category fail!');</script>");
-		} */
 	
 	} 
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
 	Statement stmt3 = conn.createStatement();
+	Statement stmt4 = conn.createStatement();
+	Statement stmt5 = conn.createStatement();
+	ResultSet rsSum = null;
 	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products LIMIT 20");
+	int product_id;
 %>
 
 
@@ -91,29 +67,41 @@
 
 <table class="table table-striped">
 	<th></th>
-<%   while (rsProducts.next()) {  //dispaly products %> 
-		<th><%=rsProducts.getString("name")%></th>
+<%   while (rsProducts.next()) {  //dispaly products 
+		product_id = rsProducts.getInt("id");
+ 		rsSum = stmt5.executeQuery("SELECT SUM(orders.price) as totals FROM orders WHERE product_id = " + product_id);
+ 		if (rsSum.next()) {%>
+		<th><%=rsProducts.getString("name")%> (<%=rsSum.getFloat("totals") %>)</th>
+		<% } else { %>
+		<th><%=rsProducts.getString("name")%> (0)</th>
+		<% } %>		
 <% 
 	} 
-	rsProducts = stmt2.executeQuery("SELECT * from products LIMIT 20");
-	ResultSet rs = stmt.executeQuery("select distinct users.name, users.id as user_id from users inner join orders on users.id = orders.user_id");
-	int product_id;
+	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products LIMIT 20");
+	ResultSet rs = stmt.executeQuery("select distinct LEFT(users.state,10) as state, users.id as user_id from users inner join orders on users.id = orders.user_id");
 	int user_id;
+	String state;
 	ResultSet rs2 = null;
+	ResultSet rs4 = null;
 	%>
 			<tbody>
-				<% while (rs.next()) { //loop through customers %>
+				<% while (rs.next()) { //loop through states
+					user_id = rs.getInt("user_id");
+					state = rs.getString("state");
+					rs4 = stmt4.executeQuery("SELECT SUM(orders.price) as totals FROM orders INNER JOIN users ON orders.user_id = users.id WHERE users.state = '" + state + "'");
+					if (rs4.next()) {%>
 					<tr>
-					<th><%=rs.getString("name")%></th>
-				<% 	rsProducts = stmt2.executeQuery("SELECT * from products LIMIT 20");
-					user_id = rs.getInt("user_id");	
+					<th><%=state%> (<%=rs4.getFloat("totals")%>)</th>
+					<% } else { %>
+					<tr>
+					<th><%=state%> (0)</th>
+					<% } %>
+				<% 	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products LIMIT 20");	
 						while (rsProducts.next()) {
 							product_id = rsProducts.getInt("id");
-							System.out.println("product_id = " + product_id);
-							System.out.println("user _id = " + user_id);
-							rs2 = stmt3.executeQuery("SELECT SUM(orders.price * orders.quantity) AS display_price" + 
-									" FROM orders where orders.product_id ='"
-									+ product_id + "' AND orders.user_id = '" + user_id + "' GROUP BY orders.product_id, orders.user_id");
+							rs2 = stmt3.executeQuery("SELECT SUM(orders.price) AS display_price" + 
+									" FROM orders INNER JOIN users ON orders.user_id=users.id WHERE orders.product_id ='"
+									+ product_id + "' AND users.state = '" + state + "' GROUP BY orders.product_id, users.state");
 						
 				 if (rs2.next()) { //loop through to get products sum %>
 						<td><%=rs2.getFloat("display_price")%></td>
