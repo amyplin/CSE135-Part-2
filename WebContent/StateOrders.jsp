@@ -62,11 +62,7 @@
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
 	Statement stmt3 = conn.createStatement();
-	Statement stmt4 = conn.createStatement();
-	Statement stmt5 = conn.createStatement();
-	ResultSet rsSum = null;
 	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products LIMIT 20");
-	int product_id;
 %>
 
 
@@ -95,37 +91,27 @@
 
 <table class="table table-striped">
 	<th></th>
-<%   while (rsProducts.next()) {  //dispaly products 
-		product_id = rsProducts.getInt("id");
- 		rsSum = stmt5.executeQuery("SELECT SUM(orders.price) as totals FROM orders WHERE product_id = " + product_id);
- 		if (rsSum.next()) {%>
-		<th><%=rsProducts.getString("name")%> (<%=rsSum.getFloat("totals") %>)</th>
-		<% } else { %>
-		<th><%=rsProducts.getString("name")%> (0)</th>
-		<% } %>		
+<%   while (rsProducts.next()) {  //dispaly products %> 
+		<th><%=rsProducts.getString("name")%></th>
 <% 
 	} 
-	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products LIMIT 20");
-	ResultSet rs = stmt.executeQuery("select distinct LEFT(users.name,10) as name, users.id as user_id from users inner join orders on users.id = orders.user_id");
+	rsProducts = stmt2.executeQuery("SELECT * from products LIMIT 20");
+	ResultSet rs = stmt.executeQuery("select distinct users.name, users.id as user_id from users inner join orders on users.id = orders.user_id");
+	int product_id;
 	int user_id;
 	ResultSet rs2 = null;
-	ResultSet rs4 = null;
 	%>
 			<tbody>
-				<% while (rs.next()) { //loop through customers
-					user_id = rs.getInt("user_id");
-					rs4 = stmt4.executeQuery("SELECT SUM(orders.price) as totals FROM orders WHERE user_id = " + user_id);
-					if (rs4.next()) {%>
+				<% while (rs.next()) { //loop through customers %>
 					<tr>
-					<th><%=rs.getString("name")%> ( <%=rs4.getFloat("totals")%>)</th>
-					<% } else { %>
-					<tr>
-					<th><%=rs.getString("name")%> (0)</th>
-					<% } %>
-				<% 	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products LIMIT 20");	
+					<th><%=rs.getString("name")%></th>
+				<% 	rsProducts = stmt2.executeQuery("SELECT * from products LIMIT 20");
+					user_id = rs.getInt("user_id");	
 						while (rsProducts.next()) {
 							product_id = rsProducts.getInt("id");
-							rs2 = stmt3.executeQuery("SELECT SUM(orders.price) AS display_price" + 
+							System.out.println("product_id = " + product_id);
+							System.out.println("user _id = " + user_id);
+							rs2 = stmt3.executeQuery("SELECT SUM(orders.price * orders.quantity) AS display_price" + 
 									" FROM orders where orders.product_id ='"
 									+ product_id + "' AND orders.user_id = '" + user_id + "' GROUP BY orders.product_id, orders.user_id");
 						
