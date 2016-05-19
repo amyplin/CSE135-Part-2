@@ -13,6 +13,7 @@
 
 <%
 	Connection conn = null;
+	String order = " ORDER BY name ";
 
 	try {
 		Class.forName("org.postgresql.Driver");
@@ -36,9 +37,12 @@
 	Statement stmt3 = conn.createStatement();
 	Statement stmt4 = conn.createStatement();
 	Statement stmt5 = conn.createStatement();
+	Statement stmt6 = conn.createStatement();
+	ResultSet rsCategories = stmt6.executeQuery("SELECT name FROM categories");
 	ResultSet rsSum = null;
-	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products LIMIT 20");
+	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products" + order + "LIMIT 20");
 	int product_id;
+
 %>
 
 
@@ -56,10 +60,23 @@
 
   <div class="form-group">
   	<form action="orders.jsp" method="POST">
+  	<label for="Rows">Rows:</label>
   	<select name="rows" id="rows" class="form-control">
 	    <option value="Customers">Customers</option>
 	    <option value="States">States</option>
 	</select>	
+  	<label for="Order">Order:</label>
+  	<select name="Order" id="order" class="form-control">
+	    <option value="Alphabetical">Alphabetical</option>
+	    <option value="Top-K">Top-K</option>
+	</select>
+	<label for="Sales">Sales-Filtering:</label>
+  	<select name="Sales" id="sales" class="form-control">
+  	<% while (rsCategories.next()) { 
+  		String category = rsCategories.getString("name"); %>
+  		<option value=<%=category%>><%=category%></option>
+  	<% } %>
+	</select>
 	<td><input class="btn btn-primary" type="submit" name="submit" value="submit"/></td>
 	</form>
   </div>
@@ -77,8 +94,9 @@
 		<% } %>		
 <% 
 	} 
-	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products LIMIT 20");
-	ResultSet rs = stmt.executeQuery("select distinct LEFT(users.name,10) as name, users.id as user_id from users inner join orders on users.id = orders.user_id");
+	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products" + order + "LIMIT 20");
+	ResultSet rs = stmt.executeQuery("SELECT DISTINCT LEFT(lower(users.name),10) as name, users.id as user_id FROM users INNER JOIN orders ON users.id = orders.user_id" + 
+					order + "LIMIT 10");
 	int user_id;
 	ResultSet rs2 = null;
 	ResultSet rs4 = null;

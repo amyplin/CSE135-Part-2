@@ -13,6 +13,8 @@
 
 <%
 	Connection conn = null;
+	String order = " ORDER BY name ";
+	String orderState = " ORDER BY state ";
 
 	try {
 		Class.forName("org.postgresql.Driver");
@@ -37,7 +39,7 @@
 	Statement stmt4 = conn.createStatement();
 	Statement stmt5 = conn.createStatement();
 	ResultSet rsSum = null;
-	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products LIMIT 20");
+	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products" + order + "LIMIT 20");
 	int product_id;
 %>
 
@@ -77,8 +79,9 @@
 		<% } %>		
 <% 
 	} 
-	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products LIMIT 20");
-	ResultSet rs = stmt.executeQuery("select distinct LEFT(users.state,10) as state, users.id as user_id from users inner join orders on users.id = orders.user_id");
+	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products" + order + "LIMIT 20");
+	ResultSet rs = stmt.executeQuery("select distinct LEFT(users.state,10) as state, users.id as user_id from users inner join orders on users.id = orders.user_id" + 
+					orderState + "LIMIT 10");
 	int user_id;
 	String state;
 	ResultSet rs2 = null;
