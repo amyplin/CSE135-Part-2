@@ -28,18 +28,21 @@
 	
 	if ("POST".equalsIgnoreCase(request.getMethod())) {
 		String action = request.getParameter("rows");
+		String selectedOrder = request.getParameter("order");
+		String selectedCategory = request.getParameter("sales");
 		if (action.equals("Customers")) {
 			response.sendRedirect("orders.jsp");
-		}
-	
+		}	
 	} 
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
 	Statement stmt3 = conn.createStatement();
 	Statement stmt4 = conn.createStatement();
 	Statement stmt5 = conn.createStatement();
+	Statement stmt6 = conn.createStatement();
 	ResultSet rsSum = null;
-	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products" + order + "LIMIT 20");
+	ResultSet rsProducts = null; 
+	ResultSet rsCategories = stmt6.executeQuery("SELECT name FROM categories");
 	int product_id;
 %>
 
@@ -56,20 +59,36 @@
 <div>
 <div><h1>Sales Analytics</h1></div>
 
-  <div class="form-group">
+ <div class="form-group">
   	<form action="orders.jsp" method="POST">
+  	<label for="Rows">Rows:</label>
   	<select name="rows" id="rows" class="form-control">
+	    <option value="States">States</option>  	
 	    <option value="Customers">Customers</option>
-	    <option value="States">States</option>
 	</select>	
-	<td><input class="btn btn-primary" type="submit" name="submit" value="submit"/></td>
+  	<label for="Order">Order:</label>
+  	<select name="Order" id="order" class="form-control">
+	    <option value="Alphabetical">Alphabetical</option>
+	    <option value="Top-K">Top-K</option>
+	</select>
+	<label for="Sales">Sales-Filtering:</label>
+  	<select name="Sales" id="sales" class="form-control">
+  		<option value="All">All</option>
+  	<% while (rsCategories.next()) { 
+  		String category = rsCategories.getString("name"); %>
+  		<option value=<%=category%>><%=category%></option>
+  	<% } %>
+	</select>
+	<td><input class="btn btn-primary" type="submit" name="submit" value="Run Query"/></td>
 	</form>
   </div>
 
 
 <table class="table table-striped">
 	<th></th>
-<%   while (rsProducts.next()) {  //dispaly products 
+<%  
+	rsProducts = stmt2.executeQuery("SELECT * FROM products" + order + "LIMIT 20");
+	while (rsProducts.next()) {  //dispaly products 
 		product_id = rsProducts.getInt("id");
  		rsSum = stmt5.executeQuery("SELECT SUM(orders.price) as totals FROM orders WHERE product_id = " + product_id);
  		if (rsSum.next()) {%>
@@ -80,7 +99,7 @@
 <% 
 	} 
 	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products" + order + "LIMIT 20");
-	ResultSet rs = stmt.executeQuery("select distinct LEFT(users.state,10) as state, users.id as user_id from users inner join orders on users.id = orders.user_id" + 
+	ResultSet rsState = stmt.executeQuery("select distinct LEFT(users.state,10) as state, users.id as user_id from users inner join orders on users.id = orders.user_id" + 
 					orderState + "LIMIT 10");
 	int user_id;
 	String state;
@@ -88,9 +107,9 @@
 	ResultSet rs4 = null;
 	%>
 			<tbody>
-				<% while (rs.next()) { //loop through states
-					user_id = rs.getInt("user_id");
-					state = rs.getString("state");
+				<% while (rsState.next()) { //loop through states
+					user_id = rsState.getInt("user_id");
+					state = rsState.getString("state");
 					rs4 = stmt4.executeQuery("SELECT SUM(orders.price) as totals FROM orders INNER JOIN users ON orders.user_id = users.id WHERE users.state = '" + state + "'");
 					if (rs4.next()) {%>
 					<tr>
