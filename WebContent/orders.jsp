@@ -14,24 +14,27 @@
 <%
 	Connection conn = null;
 	String order = " ORDER BY name ";
+	String korder = " ORDER BY totals DESC ";
 
 	try {
 		Class.forName("org.postgresql.Driver");
-	    String url = "jdbc:postgresql://localhost:5433/postgres";
+	    String url = "jdbc:postgresql://localhost:5432/postgres";
 	    String admin = "postgres";
-	    String password = "alin";
+	    String password = "password";
   	conn = DriverManager.getConnection(url, admin, password);
 	}
 	catch (Exception e) {}
 	
-	
+	String ordering = null;
 	if ("POST".equalsIgnoreCase(request.getMethod())) {
 		String action = request.getParameter("rows");
 		if (action.equals("States")) {
 			response.sendRedirect("StateOrders.jsp");
 		}
+		
 	
 	} 
+	ordering = request.getParameter("Order");
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
 	Statement stmt3 = conn.createStatement();
@@ -68,7 +71,7 @@
   	<label for="Order">Order:</label>
   	<select name="Order" id="order" class="form-control">
 	    <option value="Alphabetical">Alphabetical</option>
-	    <option value="Top-K">Top-K</option>
+	    <option value="Top-K" <%if("Top-K".equals(ordering)){ %>selected="selected" <% }%>>Top-K</option>
 	</select>
 	<label for="Sales">Sales-Filtering:</label>
   	<select name="Sales" id="sales" class="form-control">
@@ -95,29 +98,35 @@
 <% 
 	} 
 	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products" + order + "LIMIT 20");
-	ResultSet rs = stmt.executeQuery("SELECT DISTINCT LEFT(lower(users.name),10) as name, users.id as user_id FROM users INNER JOIN orders ON users.id = orders.user_id" + 
-					order + "LIMIT 10");
+	String ordering_filter = null;
+	System.out.println(ordering);
+	if("Top-K".equals(ordering))
+		ordering_filter = korder;
+	else
+		ordering_filter = order;
+	ResultSet rs = stmt.executeQuery("SELECT DISTINCT LEFT(lower(u.name),10) as name, (SELECT SUM(o2.price) as totals FROM orders o2 WHERE user_id = u.id),id FROM users u" + 
+			ordering_filter + "LIMIT 100");
 	int user_id;
 	ResultSet rs2 = null;
 	ResultSet rs4 = null;
 	%>
 			<tbody>
 				<% while (rs.next()) { //loop through customers
-					user_id = rs.getInt("user_id");
-					rs4 = stmt4.executeQuery("SELECT SUM(orders.price) as totals FROM orders WHERE user_id = " + user_id);
-					if (rs4.next()) {%>
+					//user_id = rs.getInt("user_id");
+					//rs4 = stmt4.executeQuery("SELECT SUM(orders.price) as totals FROM orders WHERE user_id = " + user_id);
+					//if (rs4.next()) {
+				%>
 					<tr>
-					<th><%=rs.getString("name")%> ( <%=rs4.getFloat("totals")%>)</th>
-					<% } else { %>
-					<tr>
-					<th><%=rs.getString("name")%> (0)</th>
-					<% } %>
+					<th><%=rs.getString("name")%> ( <%=rs.getFloat("totals")%>)</th>
+					<% //} else { %>
+					
+					<% //} %>
 				<% 	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products LIMIT 20");	
 						while (rsProducts.next()) {
 							product_id = rsProducts.getInt("id");
 							rs2 = stmt3.executeQuery("SELECT SUM(orders.price) AS display_price" + 
 									" FROM orders where orders.product_id ='"
-									+ product_id + "' AND orders.user_id = '" + user_id + "' GROUP BY orders.product_id, orders.user_id");
+									+ product_id + "' AND orders.user_id = '" + rs.getString("id") + "' GROUP BY orders.product_id, orders.user_id");
 						
 				 if (rs2.next()) { //loop through to get products sum %>
 						<td><%=rs2.getFloat("display_price")%></td>
