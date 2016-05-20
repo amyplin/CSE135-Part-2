@@ -13,8 +13,11 @@
 
 <%
 	Connection conn = null;
-	String order = " ORDER BY name ";
+	String orderName = " ORDER BY name ";
 	String orderState = " ORDER BY state ";
+	String orderTopK = " ORDER BY totals desc";
+	String productOrder = orderName;
+	String stateOrder = orderState;
 
 	try {
 		Class.forName("org.postgresql.Driver");
@@ -28,12 +31,23 @@
 	
 	if ("POST".equalsIgnoreCase(request.getMethod())) {
 		String action = request.getParameter("rows");
-		String selectedOrder = request.getParameter("order");
-		String selectedCategory = request.getParameter("sales");
 		if (action.equals("Customers")) {
 			response.sendRedirect("orders.jsp");
-		}	
+		}
 	} 
+	
+	
+	String selectedOrder = request.getParameter("Order");
+	System.out.println("selected order = " + selectedOrder);
+	String selectedCategory = request.getParameter("sales");
+	if ("Alphabetical".equals(selectedOrder)) {
+		productOrder = orderName;
+		stateOrder = orderState;
+	} else {
+		productOrder = orderTopK;
+		stateOrder = orderTopK;
+	}
+	
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
 	Statement stmt3 = conn.createStatement();
@@ -87,53 +101,48 @@
 <table class="table table-striped">
 	<th></th>
 <%  
-	rsProducts = stmt2.executeQuery("SELECT * FROM products" + order + "LIMIT 20");
-	while (rsProducts.next()) {  //dispaly products 
-		product_id = rsProducts.getInt("id");
- 		rsSum = stmt5.executeQuery("SELECT SUM(orders.price) as totals FROM orders WHERE product_id = " + product_id);
- 		if (rsSum.next()) {%>
-		<th><%=rsProducts.getString("name")%> (<%=rsSum.getFloat("totals") %>)</th>
-		<% } else { %>
-		<th><%=rsProducts.getString("name")%> (0)</th>
-		<% } %>		
+
+	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
+				"FROM orders group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
+				"ON products.id = productInfo.product_id" + productOrder + " LIMIT 20");
+
+	while (rsProducts.next()) {  //dispaly products %>
+		<th><%=rsProducts.getString("name")%> (<%=rsProducts.getFloat("totals") %>)</th>	
 <% 
 	} 
-	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products" + order + "LIMIT 20");
-	ResultSet rsState = stmt.executeQuery("select distinct LEFT(users.state,10) as state, users.id as user_id from users inner join orders on users.id = orders.user_id" + 
-					orderState + "LIMIT 10");
+	ResultSet rsState = stmt.executeQuery("WITH stateInfo(totals, state) AS (select sum(orders.price) as totals, users.state as state " +
+				" from orders inner join users on orders.user_id = users.id group by users.state order by totals desc)" + 
+			" SELECT DISTINCT LEFT(users.state,10) as state, stateInfo.totals FROM users INNER JOIN stateInfo ON users.state = " + 
+				"stateInfo.state" +  stateOrder + " limit 10");
 	int user_id;
 	String state;
 	ResultSet rs2 = null;
 	ResultSet rs4 = null;
 	%>
 			<tbody>
-				<% while (rsState.next()) { //loop through states
-					user_id = rsState.getInt("user_id");
-					state = rsState.getString("state");
-					rs4 = stmt4.executeQuery("SELECT SUM(orders.price) as totals FROM orders INNER JOIN users ON orders.user_id = users.id WHERE users.state = '" + state + "'");
-					if (rs4.next()) {%>
+				<% while (rsState.next()) { //loop through states %>
 					<tr>
-					<th><%=state%> (<%=rs4.getFloat("totals")%>)</th>
-					<% } else { %>
-					<tr>
-					<th><%=state%> (0)</th>
-					<% } %>
-				<% 	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products LIMIT 20");	
+					<th><%=rsState.getString("state")%> (<%=rsState.getFloat("totals")%>)</th>
+
+					<% 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
+ 						"FROM orders group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
+ 						"ON products.id = productInfo.product_id" + productOrder + " LIMIT 20");
+ 				
 						while (rsProducts.next()) {
 							product_id = rsProducts.getInt("id");
+							state = rsState.getString("state");
 							rs2 = stmt3.executeQuery("SELECT SUM(orders.price) AS display_price" + 
 									" FROM orders INNER JOIN users ON orders.user_id=users.id WHERE orders.product_id ='"
 									+ product_id + "' AND users.state = '" + state + "' GROUP BY orders.product_id, users.state");
 						
 				 if (rs2.next()) { //loop through to get products sum %>
-						<td><%=rs2.getFloat("display_price")%></td>
-					<% } else { %>
-						<td>0</td>
+					<td><%=rs2.getFloat("display_price")%></td>
 					<% } %>
 
-				<% }
-				}%>
-								
+					<% } 
+					}%>
+					
+
 				</tr>
 			</tbody>
 		</table>
