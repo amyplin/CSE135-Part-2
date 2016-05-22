@@ -18,9 +18,9 @@
 
 	try {
 		Class.forName("org.postgresql.Driver");
-	    String url = "jdbc:postgresql://localhost:5432/postgres";
+	    String url = "jdbc:postgresql://localhost:5433/postgres";
 	    String admin = "postgres";
-	    String password = "password";
+	    String password = "alin";
   	conn = DriverManager.getConnection(url, admin, password);
 	}
 	catch (Exception e) {}
@@ -28,12 +28,13 @@
 	String ordering = null;
 	if ("POST".equalsIgnoreCase(request.getMethod())) {
 		String action = request.getParameter("rows");
-		if (action.equals("States")) {
+		if ("States".equals(action)) {
 			response.sendRedirect("StateOrders.jsp");
 		}
 		
 	
 	} 
+
 	ordering = request.getParameter("Order");
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
@@ -99,7 +100,7 @@
 	} 
 	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products" + order + "LIMIT 20");
 	String ordering_filter = null;
-	System.out.println(ordering);
+
 	if("Top-K".equals(ordering))
 		ordering_filter = korder;
 	else

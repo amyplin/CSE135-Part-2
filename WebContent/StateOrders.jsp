@@ -7,6 +7,21 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 <title>CSE135 Project</title>
+
+
+<script type="text/javascript">
+function nextPageProducts()
+{
+//session.setAttribute("offset", session.getAttribute("offset") + 10);
+alert("Hello!");
+}
+
+function displaymessage()
+{
+alert("Hello!");
+}
+</script>
+
 </head>
 <body>
 
@@ -18,6 +33,7 @@
 	String orderTopK = " ORDER BY totals desc";
 	String productOrder = orderName;
 	String stateOrder = orderState;
+	String salesCategory = "";
 
 	try {
 		Class.forName("org.postgresql.Driver");
@@ -28,35 +44,48 @@
 	}
 	catch (Exception e) {}
 	
-	
-	if ("POST".equalsIgnoreCase(request.getMethod())) {
-		String action = request.getParameter("rows");
-		if (action.equals("Customers")) {
-			response.sendRedirect("orders.jsp");
-		}
-	} 
-	
-	
+	String action = request.getParameter("Rows");
 	String selectedOrder = request.getParameter("Order");
-	System.out.println("selected order = " + selectedOrder);
-	String selectedCategory = request.getParameter("sales");
+	String selectedCategory = request.getParameter("Sales");
+	
+	if (selectedOrder == null)
+		session.setAttribute("order", "Alphabetical");
+	if (selectedCategory == null) {
+		session.setAttribute("sales", "All");
+	} else {
+		Statement stmt5 = conn.createStatement();
+		ResultSet getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
+		if (getName.next()) {
+			session.setAttribute("sales", getName.getString("name"));
+		}
+	}
+
+	if ("Customers".equals(action)) {
+		System.out.println("redirecting");
+			response.sendRedirect("orders.jsp");
+	}
 	if ("Alphabetical".equals(selectedOrder)) {
 		productOrder = orderName;
 		stateOrder = orderState;
-	} else {
+		session.setAttribute("order", "Alphabetical");
+	}  
+	if ("Top-K".equals(selectedOrder)) {
 		productOrder = orderTopK;
 		stateOrder = orderTopK;
+		if (!"All".equals(selectedCategory)) {
+			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
+		}
+		session.setAttribute("order", "TopK");
 	}
-	
+
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
 	Statement stmt3 = conn.createStatement();
 	Statement stmt4 = conn.createStatement();
-	Statement stmt5 = conn.createStatement();
 	Statement stmt6 = conn.createStatement();
 	ResultSet rsSum = null;
 	ResultSet rsProducts = null; 
-	ResultSet rsCategories = stmt6.executeQuery("SELECT name FROM categories");
+	ResultSet rsCategories = stmt6.executeQuery("SELECT name, id FROM categories");
 	int product_id;
 %>
 
@@ -74,23 +103,24 @@
 <div><h1>Sales Analytics</h1></div>
 
  <div class="form-group">
-  	<form action="orders.jsp" method="POST">
+  	<form action="StateOrders.jsp" method="POST">
   	<label for="Rows">Rows:</label>
-  	<select name="rows" id="rows" class="form-control">
+  	<select name="Rows" id="rows" class="form-control">
 	    <option value="States">States</option>  	
 	    <option value="Customers">Customers</option>
 	</select>	
   	<label for="Order">Order:</label>
   	<select name="Order" id="order" class="form-control">
-	    <option value="Alphabetical">Alphabetical</option>
+	    <option value=<%=session.getAttribute("order")%>><%=session.getAttribute("order")%></option>
 	    <option value="Top-K">Top-K</option>
 	</select>
 	<label for="Sales">Sales-Filtering:</label>
   	<select name="Sales" id="sales" class="form-control">
-  		<option value="All">All</option>
+  		<option value=<%=session.getAttribute("sales")%>><%=session.getAttribute("sales")%></option>
   	<% while (rsCategories.next()) { 
-  		String category = rsCategories.getString("name"); %>
-  		<option value=<%=category%>><%=category%></option>
+  		String category = rsCategories.getString("name"); 
+  		String category_id = rsCategories.getString("id");%>
+  		<option value=<%=category_id%>><%=category%></option>
   	<% } %>
 	</select>
 	<td><input class="btn btn-primary" type="submit" name="submit" value="Run Query"/></td>
@@ -103,17 +133,18 @@
 <%  
 
 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
-				"FROM orders group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
-				"ON products.id = productInfo.product_id" + productOrder + " LIMIT 20");
+				"FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
+				"ON products.id = productInfo.product_id" + productOrder + " LIMIT 10");
+
 
 	while (rsProducts.next()) {  //dispaly products %>
 		<th><%=rsProducts.getString("name")%> (<%=rsProducts.getFloat("totals") %>)</th>	
 <% 
 	} 
 	ResultSet rsState = stmt.executeQuery("WITH stateInfo(totals, state) AS (select sum(orders.price) as totals, users.state as state " +
-				" from orders inner join users on orders.user_id = users.id group by users.state order by totals desc)" + 
+				" from orders inner join users on orders.user_id = users.id " + salesCategory + " group by users.state order by totals desc)" + 
 			" SELECT DISTINCT LEFT(users.state,10) as state, stateInfo.totals FROM users INNER JOIN stateInfo ON users.state = " + 
-				"stateInfo.state" +  stateOrder + " limit 10");
+				"stateInfo.state" + stateOrder + " LIMIT 20");
 	int user_id;
 	String state;
 	ResultSet rs2 = null;
@@ -126,7 +157,7 @@
 
 					<% 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
  						"FROM orders group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
- 						"ON products.id = productInfo.product_id" + productOrder + " LIMIT 20");
+ 						"ON products.id = productInfo.product_id" + productOrder + " LIMIT 10 OFFSET " + session.getAttribute("offset")) ;
  				
 						while (rsProducts.next()) {
 							product_id = rsProducts.getInt("id");
@@ -146,9 +177,14 @@
 				</tr>
 			</tbody>
 		</table>
-
-
-
-
+<button type="button" class="btn btn-primary" onclick="displaymessage()">Next 20 States</button>
+<button type="button" class="btn btn-primary" onclick="nextPageProducts()">Next 10 Products</button>
 </body>
 </html>
+
+
+
+
+
+
+
