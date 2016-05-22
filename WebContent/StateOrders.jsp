@@ -12,7 +12,7 @@
 <script type="text/javascript">
 function nextPageProducts()
 {
-//session.setAttribute("offset", session.getAttribute("offset") + 10);
+session.setAttribute("offset", session.getAttribute("offset"));
 alert("Hello!");
 }
 
@@ -50,7 +50,7 @@ alert("Hello!");
 	
 	if (selectedOrder == null)
 		session.setAttribute("order", "Alphabetical");
-	if (selectedCategory == null) {
+	if (selectedCategory == null || selectedCategory.equals("All")) {
 		session.setAttribute("sales", "All");
 	} else {
 		Statement stmt5 = conn.createStatement();
