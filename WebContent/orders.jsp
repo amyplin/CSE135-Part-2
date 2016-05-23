@@ -64,7 +64,27 @@
 		session.setAttribute("order", "TopK");
 	}
 	
-
+	String productButton = request.getParameter("ProductButton");
+	String customerButton = request.getParameter("CustomerButton");
+	
+	if (productButton == null) {
+		session.setAttribute("offsetProduct", 0);
+	}
+	if ("Products".equals(productButton)) {
+		int num = (Integer) session.getAttribute("offsetProduct") + 10;
+		session.setAttribute("offsetProduct", num);
+		System.out.println("offset product = " + session.getAttribute("offsetProduct"));
+	}
+	
+	if (customerButton == null) {
+		session.setAttribute("offsetCustomer", 0);
+	}
+	if ("Customers".equals(customerButton)) {
+		int num = (Integer) session.getAttribute("offsetCustomer") + 20;
+		session.setAttribute("offsetCustomer", num);
+		System.out.println("offset customer = " + session.getAttribute("offsetCustomer"));
+	}
+	
 	
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
@@ -72,10 +92,21 @@
 	Statement stmt4 = conn.createStatement();
 	Statement stmt5 = conn.createStatement();
 	Statement stmt6 = conn.createStatement();
+	Statement stmt7 = conn.createStatement();
 	ResultSet rsCategories = stmt6.executeQuery("SELECT name, id FROM categories");
 	ResultSet rsSum = null;
 	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products" + order + "LIMIT 20");
 	int product_id;
+	
+	ResultSet rsCustSize = stmt7.executeQuery("select count(*) as size from (select name from users group by name) a");
+	if (rsCustSize.next()) {
+		session.setAttribute("customerNum", rsCustSize.getInt("size"));
+	}
+	ResultSet rsProductSize = stmt4.executeQuery("select count(*) as size from (select name from products group by name) a");
+	if (rsProductSize.next()) {
+		session.setAttribute("productNum", rsProductSize.getInt("size"));
+	}
+	System.out.println("customer size = " + session.getAttribute("customerNum"));
 
 %>
 
@@ -170,7 +201,21 @@ ResultSet rs = stmt.executeQuery("WITH customerInfo(totals, name, id) AS (select
 				</tr>
 			</tbody>
 		</table>
-
+		
+		<div class="form-group">
+			<form action="orders.jsp" method="POST">
+			<% if ((Integer)session.getAttribute("offsetCustomer") + 20 <= (Integer)session.getAttribute("customerNum")) { %>
+				<td><input class="btn btn-primary" type="submit" name="submit"
+					value="Next 20 Customers" /></td> 
+				<input type="hidden" name="CustomerButton" value="Customers" />
+			<% } %>
+			<% if ((Integer)session.getAttribute("offsetProduct") + 10 <= (Integer)session.getAttribute("productNum")) { %>
+				<td><input class="btn btn-primary" type="submit" name="submit"
+					value="Next 10 Products" /></td>
+				<input type="hidden" name="ProductButton" value="Products" />
+			<% } %>
+			</form>			
+		</div>
 
 
 

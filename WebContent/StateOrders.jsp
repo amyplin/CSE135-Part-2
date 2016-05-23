@@ -33,9 +33,12 @@
 	}
 	catch (Exception e) {}
 	
+	String productButton = request.getParameter("ProductButton");
+	String stateButton = request.getParameter("StateButton");
 	String action = request.getParameter("Rows");
 	String selectedOrder = request.getParameter("Order");
 	String selectedCategory = request.getParameter("Sales");
+	String selectedButton = request.getParameter("Button");
 	
 	if (selectedOrder == null)
 		session.setAttribute("order", "Alphabetical");
@@ -43,13 +46,30 @@
 		session.setAttribute("sales", "All");
 	} else {
 		Statement stmt5 = conn.createStatement();
-		System.out.println("selected category supposed to be id = " + selectedCategory);
 		ResultSet getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
 		if (getName.next()) {
 			session.setAttribute("sales", getName.getString("name"));
 		}
 	}
-
+	
+	if (productButton == null) {
+		session.setAttribute("offsetProduct", 0);
+	}
+	if ("Products".equals(productButton)) {
+		int num = (Integer) session.getAttribute("offsetProduct") + 10;
+		session.setAttribute("offsetProduct", num);
+		System.out.println("offset product = " + session.getAttribute("offsetProduct"));
+	}
+	
+	if (stateButton == null) {
+		session.setAttribute("offsetState", 0);
+	}
+	if ("States".equals(stateButton)) {
+		int num = (Integer) session.getAttribute("offsetState") + 20;
+		session.setAttribute("offsetState", num);
+		System.out.println("offset state = " + session.getAttribute("offsetState"));
+	}
+	
 	if ("Customers".equals(action)) {
 		System.out.println("redirecting");
 			response.sendRedirect("orders.jsp");
@@ -80,10 +100,21 @@
 	Statement stmt3 = conn.createStatement();
 	Statement stmt4 = conn.createStatement();
 	Statement stmt6 = conn.createStatement();
+	Statement stmt7 = conn.createStatement();
+	
 	ResultSet rsSum = null;
 	ResultSet rsProducts = null; 
 	ResultSet rsCategories = stmt6.executeQuery("SELECT name, id FROM categories");
 	int product_id;
+	ResultSet rsCatSize = stmt7.executeQuery("select count(*) as size from (select state from users group by state) a");
+	if (rsCatSize.next()) {
+		session.setAttribute("stateNum", rsCatSize.getInt("size"));
+	}
+	ResultSet rsProductSize = stmt4.executeQuery("select count(*) as size from (select name from products group by name) a");
+	if (rsProductSize.next()) {
+		session.setAttribute("productNum", rsProductSize.getInt("size"));
+	}
+	System.out.println("product size = " + session.getAttribute("productNum"));
 %>
 
 
@@ -138,7 +169,7 @@
 
 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
 				"FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
-				"ON products.id = productInfo.product_id" + productOrder + " LIMIT 10");
+				"ON products.id = productInfo.product_id" + productOrder + " LIMIT 10 OFFSET " + session.getAttribute("offsetProduct"));
 
 
 	while (rsProducts.next()) {  //dispaly products %>
@@ -148,7 +179,7 @@
 	ResultSet rsState = stmt.executeQuery("WITH stateInfo(totals, state) AS (select sum(orders.price) as totals, users.state as state " +
 				" from orders inner join users on orders.user_id = users.id " + salesCategory + " group by users.state order by totals desc)" + 
 			" SELECT DISTINCT LEFT(users.state,10) as state, stateInfo.totals FROM users INNER JOIN stateInfo ON users.state = " + 
-				"stateInfo.state" + stateOrder + " LIMIT 20");
+				"stateInfo.state" + stateOrder + " LIMIT 20 OFFSET " + session.getAttribute("offsetState"));
 	int user_id;
 	String state;
 	ResultSet rs2 = null;
@@ -161,7 +192,7 @@
 
 					<% 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
 							"FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
-							"ON products.id = productInfo.product_id" + productOrder + " LIMIT 10");
+							"ON products.id = productInfo.product_id" + productOrder + " LIMIT 10 OFFSET " + session.getAttribute("offestProduct"));
  				
 						while (rsProducts.next()) {
 							product_id = rsProducts.getInt("id");
@@ -188,11 +219,17 @@
 
 		<div class="form-group">
 			<form action="StateOrders.jsp" method="POST">
+			<% if ((Integer)session.getAttribute("offsetState") + 20 <= (Integer)session.getAttribute("stateNum")) { %>
+				<td><input class="btn btn-primary" type="submit" name="submit"
+					value="Next 20 States" /></td> 
+				<input type="hidden" name="StateButton" value="States" />
+			<% } %>
+			<% if ((Integer)session.getAttribute("offsetProduct") + 10 <= (Integer)session.getAttribute("productNum")) { %>
 				<td><input class="btn btn-primary" type="submit" name="submit"
 					value="Next 10 Products" /></td>
-				<td><input class="btn btn-primary" type="submit" name="submit"
-					value="Next 10 States" /></td>
-			</form>
+				<input type="hidden" name="ProductButton" value="Products" />
+			<% } %>
+			</form>			
 		</div>
 </body>
 </html>
