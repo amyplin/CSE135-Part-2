@@ -15,6 +15,7 @@
 	Connection conn = null;
 	String order = " ORDER BY name ";
 	String korder = " ORDER BY totals DESC ";
+	String salesCategory = "";
 
 	try {
 		Class.forName("org.postgresql.Driver");
@@ -25,24 +26,53 @@
 	}
 	catch (Exception e) {}
 	
-	String ordering = null;
 	if ("POST".equalsIgnoreCase(request.getMethod())) {
 		String action = request.getParameter("rows");
 		if ("States".equals(action)) {
 			response.sendRedirect("StateOrders.jsp");
-		}
-		
-	
+		}	
 	} 
 
-	ordering = request.getParameter("Order");
+	String ordering = request.getParameter("Order");
+	String selectedCategory = request.getParameter("Sales");
+	String ordering_filter = order;
+	
+	//initialize for drop down menu
+	if (ordering == null)
+		session.setAttribute("order", "Alphabetical");
+	if (selectedCategory == null || selectedCategory.equals("All")) {
+		session.setAttribute("sales", "All");
+	} else {
+		Statement stmt5 = conn.createStatement();
+		ResultSet getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
+		if (getName.next()) {
+			session.setAttribute("sales", getName.getString("name"));
+		}
+	}
+
+	if ("Alphabetical".equals(ordering)) {
+		System.out.println("alphabetical");
+		ordering_filter = order;
+		session.setAttribute("order", "Alphabetical");
+	}  
+	if ("Top-K".equals(ordering)) {
+		System.out.println("selected category = " + selectedCategory);
+		ordering_filter = korder;
+		if (!"All".equals(selectedCategory)) {
+			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
+		}
+		session.setAttribute("order", "TopK");
+	}
+	
+
+	
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
 	Statement stmt3 = conn.createStatement();
 	Statement stmt4 = conn.createStatement();
 	Statement stmt5 = conn.createStatement();
 	Statement stmt6 = conn.createStatement();
-	ResultSet rsCategories = stmt6.executeQuery("SELECT name FROM categories");
+	ResultSet rsCategories = stmt6.executeQuery("SELECT name, id FROM categories");
 	ResultSet rsSum = null;
 	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products" + order + "LIMIT 20");
 	int product_id;
@@ -62,67 +92,66 @@
 <div>
 <div><h1>Sales Analytics</h1></div>
 
-  <div class="form-group">
+ <div class="form-group">
   	<form action="orders.jsp" method="POST">
   	<label for="Rows">Rows:</label>
-  	<select name="rows" id="rows" class="form-control">
-	    <option value="Customers">Customers</option>
-	    <option value="States">States</option>
+  	<select name="Rows" id="rows" class="form-control">
+  		<option value="Customers">Customers</option>
+	    <option value="States">States</option>  	
 	</select>	
   	<label for="Order">Order:</label>
   	<select name="Order" id="order" class="form-control">
-	    <option value="Alphabetical">Alphabetical</option>
-	    <option value="Top-K" <%if("Top-K".equals(ordering)){ %>selected="selected" <% }%>>Top-K</option>
+	    <option value=<%=session.getAttribute("order")%>><%=session.getAttribute("order")%></option>
+	    <option value="Top-K">Top-K</option>
 	</select>
 	<label for="Sales">Sales-Filtering:</label>
   	<select name="Sales" id="sales" class="form-control">
+  		<option value=<%=session.getAttribute("sales")%>><%=session.getAttribute("sales")%></option>
   	<% while (rsCategories.next()) { 
-  		String category = rsCategories.getString("name"); %>
-  		<option value=<%=category%>><%=category%></option>
+  		String category = rsCategories.getString("name"); 
+  		String category_id = rsCategories.getString("id");%>
+  		<option value=<%=category_id%>><%=category%></option>
   	<% } %>
 	</select>
-	<td><input class="btn btn-primary" type="submit" name="submit" value="submit"/></td>
+	<td><input class="btn btn-primary" type="submit" name="submit" value="Run Query"/></td>
 	</form>
   </div>
 
 
 <table class="table table-striped">
 	<th></th>
-<%   while (rsProducts.next()) {  //dispaly products 
-		product_id = rsProducts.getInt("id");
- 		rsSum = stmt5.executeQuery("SELECT SUM(orders.price) as totals FROM orders WHERE product_id = " + product_id);
- 		if (rsSum.next()) {%>
-		<th><%=rsProducts.getString("name")%> (<%=rsSum.getFloat("totals") %>)</th>
-		<% } else { %>
-		<th><%=rsProducts.getString("name")%> (0)</th>
-		<% } %>		
+	
+	<%  
+	
+	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
+				" FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo" + 
+				" ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10");
+
+
+	while (rsProducts.next()) {  //dispaly products %>
+		<th><%=rsProducts.getString("name")%> (<%=rsProducts.getFloat("totals") %>)</th>	
 <% 
 	} 
-	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products" + order + "LIMIT 20");
-	String ordering_filter = null;
 
-	if("Top-K".equals(ordering))
-		ordering_filter = korder;
-	else
-		ordering_filter = order;
-	ResultSet rs = stmt.executeQuery("SELECT DISTINCT LEFT(lower(u.name),10) as name, (SELECT SUM(o2.price) as totals FROM orders o2 WHERE user_id = u.id),id FROM users u" + 
-			ordering_filter + "LIMIT 100");
+	
+ResultSet rs = stmt.executeQuery("WITH customerInfo(totals, name, id) AS (select sum(orders.price) as totals, users.name as name, users.id as id " +
+			"from orders inner join users on orders.user_id = users.id" + salesCategory + " group by users.id) select distinct left(users.name,10) as name," + 
+			"customerInfo.totals, users.id as id from users inner join customerInfo on users.name = customerInfo.name " + ordering_filter + "LIMIT 20");
+	
 	int user_id;
 	ResultSet rs2 = null;
 	ResultSet rs4 = null;
 	%>
 			<tbody>
 				<% while (rs.next()) { //loop through customers
-					//user_id = rs.getInt("user_id");
-					//rs4 = stmt4.executeQuery("SELECT SUM(orders.price) as totals FROM orders WHERE user_id = " + user_id);
-					//if (rs4.next()) {
 				%>
 					<tr>
 					<th><%=rs.getString("name")%> ( <%=rs.getFloat("totals")%>)</th>
-					<% //} else { %>
-					
-					<% //} %>
-				<% 	rsProducts = stmt2.executeQuery("SELECT LEFT(products.name,10) as name, products.id from products LIMIT 20");	
+				<% 		
+				rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
+						"FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
+						"ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10");
+				
 						while (rsProducts.next()) {
 							product_id = rsProducts.getInt("id");
 							rs2 = stmt3.executeQuery("SELECT SUM(orders.price) AS display_price" + 
