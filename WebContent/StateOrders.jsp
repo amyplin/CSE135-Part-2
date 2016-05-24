@@ -26,9 +26,9 @@
 
 	try {
 		Class.forName("org.postgresql.Driver");
-	    String url = "jdbc:postgresql://localhost:5433/postgres";
+	    String url = "jdbc:postgresql://localhost:5432/postgres";
 	    String admin = "postgres";
-	    String password = "alin";
+	    String password = "password";
   	conn = DriverManager.getConnection(url, admin, password);
 	}
 	catch (Exception e) {}
@@ -157,7 +157,7 @@
 					<% while (rsCategories.next()) { 
   		String category = rsCategories.getString("name"); 
   		String category_id = rsCategories.getString("id");%>
-					<option value=<%=category_id%>><%=category%></option>
+					<option value=<%=category_id%> <%if(category_id.equals(session.getAttribute("sales"))){ %>selected="selected"<%} %>><%=category%></option>
 					<% } %>
 				</select>
 				<td><input class="btn btn-primary" type="submit" name="submit"
