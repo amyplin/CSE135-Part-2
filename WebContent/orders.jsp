@@ -19,15 +19,15 @@
 
 	try {
 		Class.forName("org.postgresql.Driver");
-	    String url = "jdbc:postgresql://localhost:5433/postgres";
+	    String url = "jdbc:postgresql://localhost:5432/postgres";
 	    String admin = "postgres";
-	    String password = "alin";
+	    String password = "password";
   	conn = DriverManager.getConnection(url, admin, password);
 	}
 	catch (Exception e) {}
 	
 	if ("POST".equalsIgnoreCase(request.getMethod())) {
-		String action = request.getParameter("rows");
+		String action = request.getParameter("Rows");
 		if ("States".equals(action)) {
 			response.sendRedirect("StateOrders.jsp");
 		}	
@@ -93,7 +93,7 @@
 	Statement stmt5 = conn.createStatement();
 	Statement stmt6 = conn.createStatement();
 	Statement stmt7 = conn.createStatement();
-	ResultSet rsCategories = stmt6.executeQuery("SELECT name, id FROM categories");
+	ResultSet rsCategories = stmt6.executeQuery("SELECT DISTINCT ON(name) name, id FROM categories");
 	ResultSet rsSum = null;
 	ResultSet rsProducts = stmt2.executeQuery("SELECT * FROM products" + order + "LIMIT 20");
 	int product_id;
@@ -132,17 +132,19 @@
 	</select>	
   	<label for="Order">Order:</label>
   	<select name="Order" id="order" class="form-control">
-	    <option value=<%=session.getAttribute("order")%>><%=session.getAttribute("order")%></option>
-	    <option value="Top-K">Top-K</option>
+	    <option value="Alphabetical">Alphabetical</option>
+	    <option value="Top-K" <%if("TopK".equals(session.getAttribute("order"))) {%> selected="selected"<% } %>>Top-K</option>
 	</select>
 	<label for="Sales">Sales-Filtering:</label>
   	<select name="Sales" id="sales" class="form-control">
-  	<% System.out.println("sales = " + session.getAttribute("sales"));%>
-  		<option value=<%=session.getAttribute("sales")%>><%=session.getAttribute("sales")%></option>
+  	<% System.out.println("sales = " + session.getAttribute("sales"));
+  	System.out.println("order = " + session.getAttribute("order"));
+  	%>
+  	<option value="All">All</option>
   	<% while (rsCategories.next()) { 
   		String category = rsCategories.getString("name"); 
   		String category_id = rsCategories.getString("id");%>
-  		<option value=<%=category_id%>><%=category%></option>
+  		<option value=<%=category_id%> <%if(category_id.equals(session.getAttribute("sales"))){ %>selected="selected"<%} %>><%=category%></option>
   	<% } %>
 	</select>
 	<td><input class="btn btn-primary" type="submit" name="submit" value="Run Query"/></td>
