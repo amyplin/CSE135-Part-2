@@ -41,6 +41,7 @@
 	if (ordering == null)
 		session.setAttribute("order", "Alphabetical");
 	if (selectedCategory == null || selectedCategory.equals("All")) {
+		System.out.println("in here");
 		session.setAttribute("sales", "All");
 	} else {
 		Statement stmt5 = conn.createStatement();
@@ -84,7 +85,6 @@
 		session.setAttribute("offsetCustomer", num);
 		System.out.println("offset customer = " + session.getAttribute("offsetCustomer"));
 	}
-	
 	
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
@@ -137,6 +137,7 @@
 	</select>
 	<label for="Sales">Sales-Filtering:</label>
   	<select name="Sales" id="sales" class="form-control">
+  	<% System.out.println("sales = " + session.getAttribute("sales"));%>
   		<option value=<%=session.getAttribute("sales")%>><%=session.getAttribute("sales")%></option>
   	<% while (rsCategories.next()) { 
   		String category = rsCategories.getString("name"); 
@@ -155,7 +156,8 @@
 	<%  
 	
 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
-				" FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo" + 
+				" FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, CASE WHEN productInfo.totals " + 
+				"IS NULL THEN 0 ELSE productInfo.totals end as totals, products.id FROM products INNER JOIN productInfo" + 
 				" ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10");
 
 
@@ -166,7 +168,7 @@
 
 	
 ResultSet rs = stmt.executeQuery("WITH customerInfo(totals, name, id) AS (select sum(orders.price) as totals, users.name as name, users.id as id " +
-			"from orders inner join users on orders.user_id = users.id" + salesCategory + " group by users.id) select distinct left(users.name,10) as name," + 
+			"from orders inner join users on orders.user_id = users.id " + salesCategory + " group by users.id) select distinct left(users.name,10) as name," + 
 			"customerInfo.totals, users.id as id from users inner join customerInfo on users.name = customerInfo.name " + ordering_filter + "LIMIT 20");
 	
 	int user_id;

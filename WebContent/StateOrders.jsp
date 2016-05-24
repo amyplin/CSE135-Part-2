@@ -39,6 +39,7 @@
 	String selectedOrder = request.getParameter("Order");
 	String selectedCategory = request.getParameter("Sales");
 	String selectedButton = request.getParameter("Button");
+	String salesDisplay = "";
 	
 	if (selectedOrder == null)
 		session.setAttribute("order", "Alphabetical");
@@ -80,6 +81,7 @@
 		if (!"All".equals(selectedCategory)) {
 			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
 			salesCategoryMenu = "where id = " + selectedCategory;
+			salesDisplay = "and products.category_id = " + selectedCategory;
 		}
 		session.setAttribute("order", "Alphabetical");
 	}  
@@ -168,7 +170,8 @@
 			<%  
 
 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
-				"FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
+				"FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, CASE WHEN productInfo.totals IS NULL THEN 0 ELSE productInfo.totals end as totals, "
+			+ "products.id FROM products LEFT OUTER JOIN productInfo " + 
 				"ON products.id = productInfo.product_id" + productOrder + " LIMIT 10 OFFSET " + session.getAttribute("offsetProduct"));
 
 
@@ -189,17 +192,23 @@
 				<% while (rsState.next()) { //loop through states %>
 				<tr>
 					<th><%=rsState.getString("state")%> (<%=rsState.getFloat("totals")%>)</th>
-
-					<% 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
-							"FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
-							"ON products.id = productInfo.product_id" + productOrder + " LIMIT 10 OFFSET " + session.getAttribute("offestProduct"));
+<%
+								
+					 		rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
+							"FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, CASE WHEN productInfo.totals IS NULL THEN 0 ELSE productInfo.totals end as totals, "
+							+ "products.id FROM products LEFT OUTER JOIN productInfo " + 
+								"ON products.id = productInfo.product_id" + productOrder + " LIMIT 10 OFFSET " + session.getAttribute("offsetProduct"));
  				
 						while (rsProducts.next()) {
 							product_id = rsProducts.getInt("id");
-							state = rsState.getString("state");
+							state = rsState.getString("state");		
+							
+							
+							
 							rs2 = stmt3.executeQuery("SELECT SUM(orders.price) AS display_price" + 
-									" FROM orders INNER JOIN users ON orders.user_id=users.id WHERE orders.product_id ='"
-									+ product_id + "' AND users.state = '" + state + "' GROUP BY orders.product_id, users.state");
+									" FROM orders INNER JOIN users ON orders.user_id=users.id inner join products on orders.product_id " + 
+							" = products.id "+ salesCategory + " WHERE orders.product_id ='"
+									+ product_id + "' AND users.state = '" + state + salesDisplay + "' GROUP BY orders.product_id, users.state");
 						
 				 if (rs2.next()) { //loop through to get products sum %>
 					<td><%=rs2.getFloat("display_price")%></td>
