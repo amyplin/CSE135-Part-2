@@ -36,6 +36,7 @@
 	String ordering = request.getParameter("Order");
 	String selectedCategory = request.getParameter("Sales");
 	String ordering_filter = order;
+	String salesDisplay = "";
 	
 	//initialize for drop down menu
 	if (ordering == null)
@@ -55,12 +56,17 @@
 		System.out.println("alphabetical");
 		ordering_filter = order;
 		session.setAttribute("order", "Alphabetical");
+		if (!"All".equals(selectedCategory)) {
+			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
+			salesDisplay = "and products.category_id = " + selectedCategory;
+		}
 	}  
 	if ("Top-K".equals(ordering)) {
 		System.out.println("selected category = " + selectedCategory);
 		ordering_filter = korder;
 		if (!"All".equals(selectedCategory)) {
 			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
+			salesDisplay = "and products.category_id = " + selectedCategory;
 		}
 		session.setAttribute("order", "TopK");
 	}
@@ -154,10 +160,11 @@
 	<th></th>
 	
 	<%  
+
 	
 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
 				" FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, CASE WHEN productInfo.totals " + 
-				"IS NULL THEN 0 ELSE productInfo.totals end as totals, products.id FROM products INNER JOIN productInfo" + 
+				"IS NULL THEN 0 ELSE productInfo.totals end as totals, products.id FROM products LEFT OUTER JOIN productInfo" + 
 				" ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10");
 
 
@@ -174,32 +181,39 @@ ResultSet rs = stmt.executeQuery("WITH customerInfo(totals, name, id) AS (select
 	int user_id;
 	ResultSet rs2 = null;
 	ResultSet rs4 = null;
+	int total;
 	%>
 			<tbody>
 				<% while (rs.next()) { //loop through customers
 				%>
 					<tr>
 					<th><%=rs.getString("name")%> ( <%=rs.getFloat("totals")%>)</th>
-				<% 		
-				rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
-						"FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, productInfo.totals as totals, products.id FROM products INNER JOIN productInfo " + 
-						"ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10");
-				
-						while (rsProducts.next()) {
-							product_id = rsProducts.getInt("id");
-							rs2 = stmt3.executeQuery("SELECT SUM(orders.price) AS display_price" + 
-									" FROM orders where orders.product_id ='"
-									+ product_id + "' AND orders.user_id = '" + rs.getString("id") + "' GROUP BY orders.product_id, orders.user_id");
-						
-				 if (rs2.next()) { //loop through to get products sum %>
-						<td><%=rs2.getFloat("display_price")%></td>
-					<% } else { %>
-						<td>0</td>
+					<%
+						rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
+									" FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, CASE WHEN productInfo.totals " + 
+									"IS NULL THEN 0 ELSE productInfo.totals end as totals, products.id FROM products LEFT OUTER JOIN productInfo" + 
+									" ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10");
+							
+									while (rsProducts.next()) {
+										product_id = rsProducts.getInt("id");
+										total = rsProducts.getInt("totals");
+										rs2 = stmt3.executeQuery("SELECT SUM(orders.price) AS display_price" + 
+												" FROM orders INNER JOIN products on orders.product_id = products.id where orders.product_id ='"
+												+ product_id + "' AND orders.user_id = '" + rs.getString("id") + "' " + salesDisplay + " GROUP BY orders.product_id, orders.user_id");
+
+				if (total == 0) {%>
+					<td>0.0</td>
+					<%
+						} else if (rs2.next()) { //loop through to get products sum
+					%>
+					<td><%=rs2.getFloat("display_price")%></td>
 					<% } %>
 
-				<% }
-				}%>
-								
+					<%
+						}
+						}
+					%>
+
 				</tr>
 			</tbody>
 		</table>
