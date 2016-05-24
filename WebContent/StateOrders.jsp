@@ -91,6 +91,7 @@
 		if (!"All".equals(selectedCategory)) {
 			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
 			salesCategoryMenu = "where id = " + selectedCategory;
+			salesDisplay = "and products.category_id = " + selectedCategory;
 		} else {
 			salesCategoryMenu = "";
 		}
@@ -185,6 +186,7 @@
 				"stateInfo.state" + stateOrder + " LIMIT 20 OFFSET " + session.getAttribute("offsetState"));
 	int user_id;
 	String state;
+	int totals;
 	ResultSet rs2 = null;
 	ResultSet rs4 = null;
 	%>
@@ -202,15 +204,23 @@
 						while (rsProducts.next()) {
 							product_id = rsProducts.getInt("id");
 							state = rsState.getString("state");		
+							int total = rsProducts.getInt("totals");
 							
 							
-							
-							rs2 = stmt3.executeQuery("SELECT SUM(orders.price) AS display_price" + 
-									" FROM orders INNER JOIN users ON orders.user_id=users.id inner join products on orders.product_id " + 
-							" = products.id "+ salesCategory + " WHERE orders.product_id ='"
-									+ product_id + "' AND users.state = '" + state + salesDisplay + "' GROUP BY orders.product_id, users.state");
+/*  					rs2 = stmt3.executeQuery("SELECT COALESCE(SUM(orders.price),0) AS display_price" + 
+				 		" FROM orders INNER JOIN users ON orders.user_id=users.id INNER JOIN products on orders.product_id = products.id WHERE orders.product_id ='"
+				 		+ product_id + "' AND users.state = '" + state + "'" + salesDisplay + " GROUP BY orders.product_id, users.state");  */
+
+				 		
+	 					rs2 = stmt3.executeQuery("select coalesce(display_price, 0) as display_price from (SELECT SUM(orders.price) AS display_price" + 
+	 					 		" FROM orders INNER JOIN users ON orders.user_id=users.id INNER JOIN products on orders.product_id = products.id WHERE orders.product_id ='"
+	 					 		+ product_id + "' AND users.state = '" + state + "'" + salesDisplay + " GROUP BY orders.product_id, users.state) a "); 
+				 		
 						
-				 if (rs2.next()) { //loop through to get products sum %>
+				 if (total == 0) { %>
+				 		<td>0.0</td>
+				 <% 
+				 } else if (rs2.next()) { //loop through to get products sum %>
 					<td><%=rs2.getFloat("display_price")%></td>
 					<%
 						}
