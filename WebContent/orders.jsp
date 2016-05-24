@@ -143,8 +143,9 @@
   	<option value="All">All</option>
   	<% while (rsCategories.next()) { 
   		String category = rsCategories.getString("name"); 
-  		String category_id = rsCategories.getString("id");%>
-  		<option value=<%=category_id%> <%if(category_id.equals(session.getAttribute("sales"))){ %>selected="selected"<%} %>><%=category%></option>
+  		String category_id = rsCategories.getString("id");
+  		%>
+  		<option value=<%=category_id%> <%if(category.equals(session.getAttribute("sales"))){ %>selected="selected"<%} %>><%=category%></option>
   	<% } %>
 	</select>
 	<td><input class="btn btn-primary" type="submit" name="submit" value="Run Query"/></td>
