@@ -12,6 +12,7 @@
 
 
 <%
+
 	Connection conn = null;
 	String order = " ORDER BY name ";
 	String korder = " ORDER BY totals DESC ";
@@ -19,38 +20,52 @@
 
 	try {
 		Class.forName("org.postgresql.Driver");
-	    String url = "jdbc:postgresql://localhost:5432/postgres";
+	    String url = "jdbc:postgresql://localhost:5433/postgres";
 	    String admin = "postgres";
-	    String password = "password";
+	    String password = "alin";
   	conn = DriverManager.getConnection(url, admin, password);
 	}
 	catch (Exception e) {}
-	
-	if ("POST".equalsIgnoreCase(request.getMethod())) {
-		String action = request.getParameter("Rows");
-		if ("States".equals(action)) {
-			response.sendRedirect("StateOrders.jsp");
-		}	
-	} 
 
 	String ordering = request.getParameter("Order");
 	String selectedCategory = request.getParameter("Sales");
 	String ordering_filter = order;
 	String salesDisplay = "";
+
 	
-	//initialize for drop down menu
-	if (ordering == null)
-		session.setAttribute("order", "Alphabetical");
-	if (selectedCategory == null || selectedCategory.equals("All")) {
-		System.out.println("in here");
-		session.setAttribute("sales", "All");
+	
+	if ("POST".equalsIgnoreCase(request.getMethod())) {
+		String action = request.getParameter("Rows");
+		if ("States".equals(action)) {
+			System.out.println("order = " + session.getAttribute("order"));
+			System.out.println("category = " + session.getAttribute("sales"));
+			response.sendRedirect("StateOrders.jsp");
+			session.setAttribute("firstTime", "false");
+		}	
 	} else {
+	
+	//if first time opening page.
+	if (session.getAttribute("firstTime").equals("true")) {
+		session.setAttribute("firstTime", "false");
+		System.out.println("first time");
+		if (ordering == null)
+			session.setAttribute("order", "Alphabetical");
+		if (selectedCategory == null) {
+			session.setAttribute("sales", "All");
+		}
+	}else {
+		if (selectedCategory == null || selectedCategory.equals("All")) {
+			session.setAttribute("sales", "All");
+		} else {
 		Statement stmt5 = conn.createStatement();
 		ResultSet getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
 		if (getName.next()) {
 			session.setAttribute("sales", getName.getString("name"));
 		}
+		}
 	}
+	System.out.println("session ordering = " + session.getAttribute("order"));
+	System.out.println("ordering = " + ordering);
 
 	if ("Alphabetical".equals(ordering)) {
 		System.out.println("alphabetical");
@@ -62,7 +77,7 @@
 		}
 	}  
 	if ("Top-K".equals(ordering)) {
-		System.out.println("selected category = " + selectedCategory);
+		//System.out.println("selected category = " + selectedCategory);
 		ordering_filter = korder;
 		if (!"All".equals(selectedCategory)) {
 			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
@@ -70,7 +85,7 @@
 		}
 		session.setAttribute("order", "TopK");
 	}
-	
+
 	String productButton = request.getParameter("ProductButton");
 	String customerButton = request.getParameter("CustomerButton");
 	
@@ -80,7 +95,7 @@
 	if ("Products".equals(productButton)) {
 		int num = (Integer) session.getAttribute("offsetProduct") + 10;
 		session.setAttribute("offsetProduct", num);
-		System.out.println("offset product = " + session.getAttribute("offsetProduct"));
+	//	System.out.println("offset product = " + session.getAttribute("offsetProduct"));
 	}
 	
 	if (customerButton == null) {
@@ -89,7 +104,9 @@
 	if ("Customers".equals(customerButton)) {
 		int num = (Integer) session.getAttribute("offsetCustomer") + 20;
 		session.setAttribute("offsetCustomer", num);
-		System.out.println("offset customer = " + session.getAttribute("offsetCustomer"));
+		//System.out.println("offset customer = " + session.getAttribute("offsetCustomer"));
+	}
+	
 	}
 	
 	Statement stmt = conn.createStatement();
@@ -112,7 +129,9 @@
 	if (rsProductSize.next()) {
 		session.setAttribute("productNum", rsProductSize.getInt("size"));
 	}
-	System.out.println("customer size = " + session.getAttribute("customerNum"));
+	
+	
+	//System.out.println("customer size = " + session.getAttribute("customerNum"));
 
 %>
 
@@ -143,8 +162,8 @@
 	</select>
 	<label for="Sales">Sales-Filtering:</label>
   	<select name="Sales" id="sales" class="form-control">
-  	<% System.out.println("sales = " + session.getAttribute("sales"));
-  	System.out.println("order = " + session.getAttribute("order"));
+  	<% //System.out.println("sales = " + session.getAttribute("sales"));
+  //	System.out.println("order = " + session.getAttribute("order"));
   	%>
   	<option value="All">All</option>
   	<% while (rsCategories.next()) { 
@@ -167,7 +186,7 @@
 	rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
 				" FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, CASE WHEN productInfo.totals " + 
 				"IS NULL THEN 0 ELSE productInfo.totals end as totals, products.id FROM products LEFT OUTER JOIN productInfo" + 
-				" ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10");
+				" ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10 OFFSET " + session.getAttribute("offsetProduct"));
 
 
 	while (rsProducts.next()) {  //dispaly products %>
@@ -178,7 +197,7 @@
 	
 ResultSet rs = stmt.executeQuery("WITH customerInfo(totals, name, id) AS (select sum(orders.price) as totals, users.name as name, users.id as id " +
 			"from orders inner join users on orders.user_id = users.id " + salesCategory + " group by users.id) select distinct left(users.name,10) as name," + 
-			"customerInfo.totals, users.id as id from users inner join customerInfo on users.name = customerInfo.name " + ordering_filter + "LIMIT 20");
+			"customerInfo.totals, users.id as id from users inner join customerInfo on users.name = customerInfo.name " + ordering_filter + "LIMIT 20 OFFSET " + session.getAttribute("offsetCustomer"));
 	
 	int user_id;
 	ResultSet rs2 = null;
@@ -194,7 +213,7 @@ ResultSet rs = stmt.executeQuery("WITH customerInfo(totals, name, id) AS (select
 						rsProducts = stmt2.executeQuery("WITH productInfo(totals, product_id) AS (select sum(orders.price) as totals, product_id " +
 									" FROM orders " + salesCategory + " group by product_id) SELECT products.name as name, CASE WHEN productInfo.totals " + 
 									"IS NULL THEN 0 ELSE productInfo.totals end as totals, products.id FROM products LEFT OUTER JOIN productInfo" + 
-									" ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10");
+									" ON products.id = productInfo.product_id" + ordering_filter + " LIMIT 10 OFFSET " + session.getAttribute("offsetProduct"));
 							
 									while (rsProducts.next()) {
 										product_id = rsProducts.getInt("id");
@@ -234,7 +253,6 @@ ResultSet rs = stmt.executeQuery("WITH customerInfo(totals, name, id) AS (select
 			<% } %>
 			</form>			
 		</div>
-
 
 
 </body>

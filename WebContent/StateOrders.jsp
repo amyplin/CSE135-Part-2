@@ -26,9 +26,9 @@
 
 	try {
 		Class.forName("org.postgresql.Driver");
-	    String url = "jdbc:postgresql://localhost:5432/postgres";
+	    String url = "jdbc:postgresql://localhost:5433/postgres";
 	    String admin = "postgres";
-	    String password = "password";
+	    String password = "alin";
   	conn = DriverManager.getConnection(url, admin, password);
 	}
 	catch (Exception e) {}
@@ -41,15 +41,41 @@
 	String selectedButton = request.getParameter("Button");
 	String salesDisplay = "";
 	
-	if (selectedOrder == null)
-		session.setAttribute("order", "Alphabetical");
-	if (selectedCategory == null || selectedCategory.equals("All")) {
-		session.setAttribute("sales", "All");
-	} else {
+	if (session.getAttribute("firstTime") == null) {
+		session.setAttribute("firstTime", "true");
+	}
+	if ("Customers".equals(action)) {
+			response.sendRedirect("orders.jsp");
+			session.setAttribute("firstTime", "false");
+	} else { 
+	
+	//if first time opening page
+	if (session.getAttribute("firstTime").equals("true")) {
+		System.out.println("first time");
+		session.setAttribute("firstTime", "false");
+		System.out.println("first time opening");
+		if (selectedOrder == null)
+			session.setAttribute("order", "Alphabetical");
+
+		if (selectedCategory == null) {
+			session.setAttribute("sales", "All");
+		}
+	}else {
+		if (selectedCategory == null || selectedOrder == null) {
+			selectedOrder = session.getAttribute("order").toString();
+			selectedCategory = session.getAttribute("sales").toString();
+		}
+		else if (selectedCategory.equals("All")) {
+			System.out.println("set ehre");
+			session.setAttribute("sales", "All");
+	
+		} else {
 		Statement stmt5 = conn.createStatement();
 		ResultSet getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
 		if (getName.next()) {
 			session.setAttribute("sales", getName.getString("name"));
+			session.setAttribute("salesID", selectedCategory);
+		}
 		}
 	}
 	
@@ -59,7 +85,8 @@
 	if ("Products".equals(productButton)) {
 		int num = (Integer) session.getAttribute("offsetProduct") + 10;
 		session.setAttribute("offsetProduct", num);
-		System.out.println("offset product = " + session.getAttribute("offsetProduct"));
+		System.out.println("order in product button = " + session.getAttribute("order"));
+		//System.out.println("offset product = " + session.getAttribute("offsetProduct"));
 	}
 	
 	if (stateButton == null) {
@@ -68,20 +95,18 @@
 	if ("States".equals(stateButton)) {
 		int num = (Integer) session.getAttribute("offsetState") + 20;
 		session.setAttribute("offsetState", num);
-		System.out.println("offset state = " + session.getAttribute("offsetState"));
+		//System.out.println("offset state = " + session.getAttribute("offsetState"));
 	}
 	
-	if ("Customers".equals(action)) {
-		System.out.println("redirecting");
-			response.sendRedirect("orders.jsp");
-	}
 	if ("Alphabetical".equals(selectedOrder)) {
+		System.out.println("selected cateogyr  asdjfad = " + selectedCategory);
 		productOrder = orderName;
 		stateOrder = orderState;
 		if (!"All".equals(selectedCategory)) {
 			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
 			salesCategoryMenu = "where id = " + selectedCategory;
 			salesDisplay = "and products.category_id = " + selectedCategory;
+			session.setAttribute("sales", selectedCategory);
 		}
 		session.setAttribute("order", "Alphabetical");
 	}  
@@ -95,9 +120,11 @@
 		} else {
 			salesCategoryMenu = "";
 		}
-		session.setAttribute("order", "TopK");
+		session.setAttribute("order", "Top-K");
+	}
 	}
 
+	System.out.println("selected category = " + session.getAttribute("sales"));
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
 	Statement stmt3 = conn.createStatement();
@@ -117,7 +144,8 @@
 	if (rsProductSize.next()) {
 		session.setAttribute("productNum", rsProductSize.getInt("size"));
 	}
-	System.out.println("product size = " + session.getAttribute("productNum"));
+	//System.out.println("product size = " + session.getAttribute("productNum"));
+
 %>
 
 
@@ -156,7 +184,8 @@
 					<option value="All">All</option>
 					<% while (rsCategories.next()) { 
   		String category = rsCategories.getString("name"); 
-  		String category_id = rsCategories.getString("id");%>
+  		String category_id = rsCategories.getString("id");
+  		%>
 					<option value=<%=category_id%> <%if(category_id.equals(session.getAttribute("sales"))){ %>selected="selected"<%} %>><%=category%></option>
 					<% } %>
 				</select>
