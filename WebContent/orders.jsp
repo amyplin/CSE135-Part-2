@@ -12,7 +12,7 @@
 
 
 <%
-
+System.out.println("--------");
 	Connection conn = null;
 	String order = " ORDER BY name ";
 	String korder = " ORDER BY totals DESC ";
@@ -32,60 +32,48 @@
 	String ordering_filter = order;
 	String salesDisplay = "";
 
+	if (session.getAttribute("firstTime") == null) {
+	    session.setAttribute("firstTime", "true");
+	  }
 	
 	
-	if ("POST".equalsIgnoreCase(request.getMethod())) {
 		String action = request.getParameter("Rows");
 		if ("States".equals(action)) {
 			System.out.println("order = " + session.getAttribute("order"));
 			System.out.println("category = " + session.getAttribute("sales"));
 			response.sendRedirect("StateOrders.jsp");
 			session.setAttribute("firstTime", "false");
-		}	
+			
 	} else {
-	
 	//if first time opening page.
-	if (session.getAttribute("firstTime").equals("true")) {
+	if ((session.getAttribute("firstTime")).equals("true")) {
+		System.out.println("first time = " + session.getAttribute("firstTime"));
 		session.setAttribute("firstTime", "false");
-		System.out.println("first time");
+		System.out.println("ordering  = " + ordering);
 		if (ordering == null)
 			session.setAttribute("order", "Alphabetical");
 		if (selectedCategory == null) {
 			session.setAttribute("sales", "All");
 		}
 	}else {
-		if (selectedCategory == null || selectedCategory.equals("All")) {
+		if (selectedCategory == null || ordering == null) {
+			ordering = session.getAttribute("order").toString();
+			System.out.println("salesID " + session.getAttribute("salesID").toString());
+			selectedCategory = session.getAttribute("salesID").toString();
+		} else if (selectedCategory.equals("All")) {	
 			session.setAttribute("sales", "All");
 		} else {
 		Statement stmt5 = conn.createStatement();
+		System.out.println("seleted category = " + selectedCategory);
 		ResultSet getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
 		if (getName.next()) {
 			session.setAttribute("sales", getName.getString("name"));
+			session.setAttribute("salesID", selectedCategory);
 		}
 		}
 	}
-	System.out.println("session ordering = " + session.getAttribute("order"));
-	System.out.println("ordering = " + ordering);
 
-	if ("Alphabetical".equals(ordering)) {
-		System.out.println("alphabetical");
-		ordering_filter = order;
-		session.setAttribute("order", "Alphabetical");
-		if (!"All".equals(selectedCategory)) {
-			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
-			salesDisplay = "and products.category_id = " + selectedCategory;
-		}
-	}  
-	if ("Top-K".equals(ordering)) {
-		//System.out.println("selected category = " + selectedCategory);
-		ordering_filter = korder;
-		if (!"All".equals(selectedCategory)) {
-			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
-			salesDisplay = "and products.category_id = " + selectedCategory;
-		}
-		session.setAttribute("order", "TopK");
-	}
-
+	
 	String productButton = request.getParameter("ProductButton");
 	String customerButton = request.getParameter("CustomerButton");
 	
@@ -106,6 +94,29 @@
 		session.setAttribute("offsetCustomer", num);
 		//System.out.println("offset customer = " + session.getAttribute("offsetCustomer"));
 	}
+	
+
+	if ("Alphabetical".equals(ordering)) {
+		System.out.println("alphabetical");
+		ordering_filter = order;
+		session.setAttribute("order", "Alphabetical");
+		if (!"All".equals(selectedCategory)) {
+			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
+			salesDisplay = "and products.category_id = " + selectedCategory;
+			session.setAttribute("sales", selectedCategory);
+		}
+	}  
+	if ("Top-K".equals(ordering)) {
+		System.out.println("in here");
+		ordering_filter = korder;
+		if (!"All".equals(selectedCategory)) {
+			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
+			salesDisplay = "and products.category_id = " + selectedCategory;
+		}
+		session.setAttribute("order", "Top-K");
+	}
+
+
 	
 	}
 	
@@ -158,7 +169,7 @@
   	<label for="Order">Order:</label>
   	<select name="Order" id="order" class="form-control">
 	    <option value="Alphabetical">Alphabetical</option>
-	    <option value="Top-K" <%if("TopK".equals(session.getAttribute("order"))) {%> selected="selected"<% } %>>Top-K</option>
+	    <option value="Top-K" <%if("Top-K".equals(session.getAttribute("order"))) {%> selected="selected"<% } %>>Top-K</option>
 	</select>
 	<label for="Sales">Sales-Filtering:</label>
   	<select name="Sales" id="sales" class="form-control">
@@ -166,12 +177,13 @@
   //	System.out.println("order = " + session.getAttribute("order"));
   	%>
   	<option value="All">All</option>
-  	<% while (rsCategories.next()) { 
-  		String category = rsCategories.getString("name"); 
-  		String category_id = rsCategories.getString("id");
-  		%>
-  		<option value=<%=category_id%> <%if(category.equals(session.getAttribute("sales"))){ %>selected="selected"<%} %>><%=category%></option>
-  	<% } %>
+    <% while (rsCategories.next()) { 
+      String category = rsCategories.getString("name"); 
+
+      String category_id = rsCategories.getString("id");%>
+          <option value=<%=category_id%> <%if(category.equals(session.getAttribute("sales"))){ %>selected="selected"<%} %>><%=category%></option>
+
+          <% } %>
 	</select>
 	<td><input class="btn btn-primary" type="submit" name="submit" value="Run Query"/></td>
 	</form>
