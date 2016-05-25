@@ -63,7 +63,7 @@
 	}else {
 		if (selectedCategory == null || selectedOrder == null) {
 			selectedOrder = session.getAttribute("order").toString();
-			selectedCategory = session.getAttribute("sales").toString();
+			selectedCategory = session.getAttribute("salesID").toString();
 		}
 		else if (selectedCategory.equals("All")) {
 			System.out.println("set ehre");
@@ -74,7 +74,7 @@
 		ResultSet getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
 		if (getName.next()) {
 			session.setAttribute("sales", getName.getString("name"));
-			session.setAttribute("salesID", selectedCategory);
+			session.setAttribute("salesID", selectedCategory); //id
 		}
 		}
 	}
@@ -124,7 +124,6 @@
 	}
 	}
 
-	System.out.println("selected category = " + session.getAttribute("sales"));
 	Statement stmt = conn.createStatement();
 	Statement stmt2 = conn.createStatement();
 	Statement stmt3 = conn.createStatement();
