@@ -39,22 +39,33 @@ System.out.println("--------");
 	
 		String action = request.getParameter("Rows");
 		if ("States".equals(action)) {
-			System.out.println("order = " + session.getAttribute("order"));
-			System.out.println("category = " + session.getAttribute("sales"));
+			Statement stmt5 = conn.createStatement();
 			response.sendRedirect("StateOrders.jsp");
 			session.setAttribute("firstTime", "false");
+			session.setAttribute("order", ordering);
+
+			ResultSet getName = null;
+			if (selectedCategory.equals("All")) {
+				session.setAttribute("sales", "All");
+				session.setAttribute("salesID", "All"); //id
+			} else {
+				getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
+				if (getName.next()) {
+					session.setAttribute("sales", getName.getString("name"));
+					session.setAttribute("salesID", selectedCategory); //id
+				}
+			}
 			
 	} else {
 	//if first time opening page.
 	if ((session.getAttribute("firstTime")).equals("true")) {
-		System.out.println("first time = " + session.getAttribute("firstTime"));
 		session.setAttribute("firstTime", "false");
-		System.out.println("ordering  = " + ordering);
 		if (ordering == null)
 			session.setAttribute("order", "Alphabetical");
 		if (selectedCategory == null) {
 			session.setAttribute("sales", "All");
 		}
+		session.setAttribute("salesID", "All");
 	}else {
 		if (selectedCategory == null || ordering == null) {
 			ordering = session.getAttribute("order").toString();
@@ -103,7 +114,7 @@ System.out.println("--------");
 		if (!"All".equals(selectedCategory)) {
 			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
 			salesDisplay = "and products.category_id = " + selectedCategory;
-			session.setAttribute("sales", selectedCategory);
+			session.setAttribute("salesID", selectedCategory);
 		}
 	}  
 	if ("Top-K".equals(ordering)) {

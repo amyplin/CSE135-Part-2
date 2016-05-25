@@ -15,137 +15,151 @@
 
 
 	<%
-	Connection conn = null;
-	String orderName = " ORDER BY name ";
-	String orderState = " ORDER BY state ";
-	String orderTopK = " ORDER BY totals desc";
-	String productOrder = orderName;
-	String stateOrder = orderState;
-	String salesCategory = "";
-	String salesCategoryMenu = "";
+		Connection conn = null;
+			String orderName = " ORDER BY name ";
+			String orderState = " ORDER BY state ";
+			String orderTopK = " ORDER BY totals desc";
+			String productOrder = orderName;
+			String stateOrder = orderState;
+			String salesCategory = "";
+			String salesCategoryMenu = "";
 
-	try {
+			try {
 		Class.forName("org.postgresql.Driver");
-	    String url = "jdbc:postgresql://localhost:5433/postgres";
-	    String admin = "postgres";
-	    String password = "alin";
-  	conn = DriverManager.getConnection(url, admin, password);
-	}
-	catch (Exception e) {}
-	
-	String productButton = request.getParameter("ProductButton");
-	String stateButton = request.getParameter("StateButton");
-	String action = request.getParameter("Rows");
-	String selectedOrder = request.getParameter("Order");
-	String selectedCategory = request.getParameter("Sales");
-	String selectedButton = request.getParameter("Button");
-	String salesDisplay = "";
-	
-	if (session.getAttribute("firstTime") == null) {
+			    String url = "jdbc:postgresql://localhost:5433/postgres";
+			    String admin = "postgres";
+			    String password = "alin";
+		  	conn = DriverManager.getConnection(url, admin, password);
+			}
+			catch (Exception e) {}
+			
+			String productButton = request.getParameter("ProductButton");
+			String stateButton = request.getParameter("StateButton");
+			String action = request.getParameter("Rows");
+			String selectedOrder = request.getParameter("Order");
+			String selectedCategory = request.getParameter("Sales");
+			String selectedButton = request.getParameter("Button");
+			String salesDisplay = "";
+			
+			if (session.getAttribute("firstTime") == null) {
 		session.setAttribute("firstTime", "true");
-	}
-	if ("Customers".equals(action)) {
+			}
+			if ("Customers".equals(action)) {
+		Statement stmt5 = conn.createStatement();
+		ResultSet getName = null;
 			response.sendRedirect("orders.jsp");
 			session.setAttribute("firstTime", "false");
-	} else { 
-	
-	//if first time opening page
-	if (session.getAttribute("firstTime").equals("true")) {
-		System.out.println("first time");
-		session.setAttribute("firstTime", "false");
-		System.out.println("first time opening");
-		if (selectedOrder == null)
-			session.setAttribute("order", "Alphabetical");
+			session.setAttribute("order", selectedOrder);
+			if (selectedCategory.equals("All")) {
+				session.setAttribute("sales", "All");
+				session.setAttribute("salesID", "All"); //id
+			} else {
+				getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
+				if (getName.next()) {
+					session.setAttribute("sales", getName.getString("name"));
+					session.setAttribute("salesID", selectedCategory); //id
+				}
+			}
 
-		if (selectedCategory == null) {
-			session.setAttribute("sales", "All");
-		}
-	}else {
-		if (selectedCategory == null || selectedOrder == null) {
-			selectedOrder = session.getAttribute("order").toString();
-			selectedCategory = session.getAttribute("salesID").toString();
-		}
-		else if (selectedCategory.equals("All")) {
-			System.out.println("set ehre");
-			session.setAttribute("sales", "All");
-	
 		} else {
-		Statement stmt5 = conn.createStatement();
-		ResultSet getName = stmt5.executeQuery("select name from categories where id = " + selectedCategory);
-		if (getName.next()) {
-			session.setAttribute("sales", getName.getString("name"));
-			session.setAttribute("salesID", selectedCategory); //id
-		}
-		}
-	}
-	
-	if (productButton == null) {
-		session.setAttribute("offsetProduct", 0);
-	}
-	if ("Products".equals(productButton)) {
-		int num = (Integer) session.getAttribute("offsetProduct") + 10;
-		session.setAttribute("offsetProduct", num);
-		System.out.println("order in product button = " + session.getAttribute("order"));
-		//System.out.println("offset product = " + session.getAttribute("offsetProduct"));
-	}
-	
-	if (stateButton == null) {
-		session.setAttribute("offsetState", 0);
-	}
-	if ("States".equals(stateButton)) {
-		int num = (Integer) session.getAttribute("offsetState") + 20;
-		session.setAttribute("offsetState", num);
-		//System.out.println("offset state = " + session.getAttribute("offsetState"));
-	}
-	
-	if ("Alphabetical".equals(selectedOrder)) {
-		System.out.println("selected cateogyr  asdjfad = " + selectedCategory);
-		productOrder = orderName;
-		stateOrder = orderState;
-		if (!"All".equals(selectedCategory)) {
-			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
-			salesCategoryMenu = "where id = " + selectedCategory;
-			salesDisplay = "and products.category_id = " + selectedCategory;
-			session.setAttribute("sales", selectedCategory);
-		}
-		session.setAttribute("order", "Alphabetical");
-	}  
-	if ("Top-K".equals(selectedOrder)) {
-		productOrder = orderTopK;
-		stateOrder = orderTopK;
-		if (!"All".equals(selectedCategory)) {
-			salesCategory = "inner join products on orders.product_id = products.id where products.category_id = " + selectedCategory;
-			salesCategoryMenu = "where id = " + selectedCategory;
-			salesDisplay = "and products.category_id = " + selectedCategory;
-		} else {
-			salesCategoryMenu = "";
-		}
-		session.setAttribute("order", "Top-K");
-	}
-	}
 
-	Statement stmt = conn.createStatement();
-	Statement stmt2 = conn.createStatement();
-	Statement stmt3 = conn.createStatement();
-	Statement stmt4 = conn.createStatement();
-	Statement stmt6 = conn.createStatement();
-	Statement stmt7 = conn.createStatement();
-	
-	ResultSet rsSum = null;
-	ResultSet rsProducts = null; 
-	ResultSet rsCategories = stmt6.executeQuery("SELECT name, id FROM categories");
-	int product_id;
-	ResultSet rsCatSize = stmt7.executeQuery("select count(*) as size from (select state from users group by state) a");
-	if (rsCatSize.next()) {
-		session.setAttribute("stateNum", rsCatSize.getInt("size"));
-	}
-	ResultSet rsProductSize = stmt4.executeQuery("select count(*) as size from (select name from products group by name) a");
-	if (rsProductSize.next()) {
-		session.setAttribute("productNum", rsProductSize.getInt("size"));
-	}
-	//System.out.println("product size = " + session.getAttribute("productNum"));
+			//if first time opening page
+			if (session.getAttribute("firstTime").equals("true")) {
+				session.setAttribute("firstTime", "false");
+				if (selectedOrder == null)
+					session.setAttribute("order", "Alphabetical");
+				if (selectedCategory == null) {
+					session.setAttribute("sales", "All");
+				}
+				session.setAttribute("salesID", "All");
+			} else {
+				if (selectedCategory == null || selectedOrder == null) {
+					selectedOrder = session.getAttribute("order").toString();
+					selectedCategory = session.getAttribute("salesID").toString();
+				} else if (selectedCategory.equals("All")) {
+					session.setAttribute("sales", "All");
+				} else {
+					Statement stmt5 = conn.createStatement();
+					ResultSet getName = stmt5
+							.executeQuery("select name from categories where id = " + selectedCategory);
+					if (getName.next()) {
+						session.setAttribute("sales", getName.getString("name"));
+						session.setAttribute("salesID", selectedCategory); //id
+					}
+				}
+			}
 
-%>
+			if (productButton == null) {
+				session.setAttribute("offsetProduct", 0);
+			}
+			if ("Products".equals(productButton)) {
+				int num = (Integer) session.getAttribute("offsetProduct") + 10;
+				session.setAttribute("offsetProduct", num);
+				System.out.println("order in product button = " + session.getAttribute("order"));
+				//System.out.println("offset product = " + session.getAttribute("offsetProduct"));
+			}
+
+			if (stateButton == null) {
+				session.setAttribute("offsetState", 0);
+			}
+			if ("States".equals(stateButton)) {
+				int num = (Integer) session.getAttribute("offsetState") + 20;
+				session.setAttribute("offsetState", num);
+				//System.out.println("offset state = " + session.getAttribute("offsetState"));
+			}
+
+			if ("Alphabetical".equals(selectedOrder)) {
+				//System.out.println("selected cateogyr  asdjfad = " + selectedCategory);
+				productOrder = orderName;
+				stateOrder = orderState;
+				if (!"All".equals(selectedCategory)) {
+					salesCategory = "inner join products on orders.product_id = products.id where products.category_id = "
+							+ selectedCategory;
+					salesCategoryMenu = "where id = " + selectedCategory;
+					salesDisplay = "and products.category_id = " + selectedCategory;
+					session.setAttribute("salesID", selectedCategory);
+					//come back
+				}
+				session.setAttribute("order", "Alphabetical");
+			}
+			if ("Top-K".equals(selectedOrder)) {
+				productOrder = orderTopK;
+				stateOrder = orderTopK;
+				if (!"All".equals(selectedCategory)) {
+					salesCategory = "inner join products on orders.product_id = products.id where products.category_id = "
+							+ selectedCategory;
+					salesCategoryMenu = "where id = " + selectedCategory;
+					salesDisplay = "and products.category_id = " + selectedCategory;
+				} else {
+					salesCategoryMenu = "";
+				}
+				session.setAttribute("order", "Top-K");
+			}
+		}
+
+		Statement stmt = conn.createStatement();
+		Statement stmt2 = conn.createStatement();
+		Statement stmt3 = conn.createStatement();
+		Statement stmt4 = conn.createStatement();
+		Statement stmt6 = conn.createStatement();
+		Statement stmt7 = conn.createStatement();
+
+		ResultSet rsSum = null;
+		ResultSet rsProducts = null;
+		ResultSet rsCategories = stmt6.executeQuery("SELECT name, id FROM categories");
+		int product_id;
+		ResultSet rsCatSize = stmt7
+				.executeQuery("select count(*) as size from (select state from users group by state) a");
+		if (rsCatSize.next()) {
+			session.setAttribute("stateNum", rsCatSize.getInt("size"));
+		}
+		ResultSet rsProductSize = stmt4
+				.executeQuery("select count(*) as size from (select name from products group by name) a");
+		if (rsProductSize.next()) {
+			session.setAttribute("productNum", rsProductSize.getInt("size"));
+		}
+		//System.out.println("product size = " + session.getAttribute("productNum"));
+	%>
 
 
 	<div class="collapse navbar-collapse">
@@ -183,7 +197,7 @@
 					<option value="All">All</option>
 					<% while (rsCategories.next()) { 
   		String category = rsCategories.getString("name"); 
-
+System.out.println("what is it = " + session.getAttribute("sales"));
   		String category_id = rsCategories.getString("id");%>
 					<option value=<%=category_id%> <%if(category.equals(session.getAttribute("sales"))){ %>selected="selected"<%} %>><%=category%></option>
 
